@@ -10,4 +10,11 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 class Controller extends BaseController
 {
     use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
+    public function counts($task) {
+        $count_tasks = $task->tasks()->count();
+
+        return [
+            'count_tasks' => $count_tasks,
+        ];
+    }
 }

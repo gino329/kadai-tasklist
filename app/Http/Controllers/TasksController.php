@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 
 use App\Tasks;
 
+use App\Http\Controllers\Controller;
+
 class TasksController extends Controller
 {
     /**
@@ -15,11 +17,21 @@ class TasksController extends Controller
      */
     public function index()
     {
-        $task = Tasks::all();
-        
-        return view('tasks.index', [
-            'tasks' => $task,
-        ]);
+       $data = [];
+        if (\Auth::check()) {
+            $user = \Auth::user();
+            $task = $user->tasks()->orderBy('created_at', 'desc')->paginate(10);
+
+            $data = [
+                'user' => $user,
+                'tasks' => $task,
+            ];
+            $data += $this->counts($user);
+            return view('users.show', $data);
+        }
+        else {
+            return view('welcome');
+        }
     }
 
     /**
@@ -49,12 +61,12 @@ class TasksController extends Controller
             'content' => 'required|max:10',
         ]);
 
-        $task = new Tasks;
-        $task->content = $request->content;
-        $task->status = $request->status;  
-        $task->save();
+        $request->user()->tasks()->create([
+            'content' => $request->content,
+            'status'=> $request->status,
+            ]);
 
-        return redirect('/');
+         return redirect('/');
     }
 
     /**
@@ -67,9 +79,16 @@ class TasksController extends Controller
     {
         $task  = Tasks::find($id);
 
-        return view('tasks.show', [
+        $task = $user->tasks()->orderBy('created_at', 'desc')->paginate(10);
+
+        $data = [
+            'user' => $user,
             'task' => $task,
-        ]);
+        ];
+
+        $data += $this->counts($user);
+
+        return view('tasks.show', $data);
     }
 
     /**
@@ -120,6 +139,10 @@ class TasksController extends Controller
         $task = Tasks::find($id);
         $task->delete();
 
-        return redirect('/');
+        if (\Auth::user()->id === $task->user_id) {
+            $task->delete();
+        }
+
+        return redirect()->back();
     }
 }
